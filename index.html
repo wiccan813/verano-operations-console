@@ -1,0 +1,279 @@
+;
+
+    <!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>VERANO Operations Console - v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body {
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#1e1f22;
+    color:#e4e6eb;
+}
+
+header {
+    padding:15px;
+    font-size:22px;
+    font-weight:bold;
+    background:#111;
+    text-align:center;
+    letter-spacing:1px;
+}
+
+.container {
+    padding:15px;
+}
+
+.status-banner {
+    padding:10px;
+    text-align:center;
+    font-weight:bold;
+    margin-bottom:10px;
+    border-radius:6px;
+}
+
+.status-normal { background:#2b2d31; }
+.status-emergency { background:#7a1f1f; }
+
+.controls button {
+    margin:5px 5px 5px 0;
+    padding:8px 12px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    background:#3a3b3f;
+    color:white;
+}
+
+.controls button:hover {
+    background:#505155;
+}
+
+.metrics {
+    margin-top:15px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:10px;
+}
+
+.metric {
+    background:#2b2d31;
+    padding:10px;
+    border-radius:6px;
+    text-align:center;
+}
+
+.timeline {
+    margin-top:15px;
+    background:#2b2d31;
+    padding:10px;
+    border-radius:6px;
+    max-height:300px;
+    overflow-y:auto;
+    font-size:14px;
+}
+
+.timeline-entry {
+    margin-bottom:4px;
+}
+
+input[type=number] {
+    width:80px;
+    padding:5px;
+}
+</style>
+</head>
+<body>
+
+<header>VERANO – Operations Console (v3)</header>
+
+<div class="container">
+
+<div id="statusBanner" class="status-banner status-normal">
+Shift Inactive
+</div>
+
+<div class="controls">
+<button onclick="startShift()">Start Shift</button>
+<button onclick="endShift()">End Shift</button>
+<button onclick="toggleBreak()">Start Break</button>
+<button onclick="setStatus('Maintenance')">Maintenance</button>
+<button onclick="setStatus('Training')">Training</button>
+<button onclick="setStatus('Meeting')">Meeting</button>
+<button onclick="setStatus('Routine')">Routine</button>
+<button onclick="triggerEmergency()">🚨 Emergency</button>
+</div>
+
+<div style="margin-top:10px;">
+Pods: <input type="number" id="podsInput" value="0">
+<button onclick="addPods()">Add</button>
+</div>
+
+<div class="metrics">
+<div class="metric">Total Pods<br><span id="totalPods">0</span></div>
+<div class="metric">Worked Time<br><span id="workedTime">0h 0m</span></div>
+<div class="metric">Break Time<br><span id="breakTime">0m</span></div>
+<div class="metric">Pods / Hour<br><span id="podsPerHour">0</span></div>
+</div>
+
+<div class="timeline" id="timeline"></div>
+
+</div>
+
+<script>
+
+let shiftActive=false;
+let shiftStart=null;
+let breakActive=false;
+let breakStart=null;
+let totalBreakMs=0;
+let currentStatus=null;
+let statusStart=null;
+let totalPods=0;
+let emergencyActive=false;
+let events=[];
+
+function now() {
+    return new Date();
+}
+
+function formatTime(date) {
+    return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function addTimeline(text) {
+    let div=document.createElement("div");
+    div.className="timeline-entry";
+    div.textContent=text;
+    document.getElementById("timeline").appendChild(div);
+    let tl=document.getElementById("timeline");
+    tl.scrollTop=tl.scrollHeight;
+}
+
+function startShift(){
+    if(shiftActive) return;
+    shiftActive=true;
+    shiftStart=now();
+    addTimeline(formatTime(shiftStart)+" - Shift Started");
+    document.getElementById("statusBanner").textContent="Shift Active";
+}
+
+function endShift(){
+    if(!shiftActive) return;
+    if(currentStatus) closeStatus();
+    if(breakActive) toggleBreak();
+    let end=now();
+    addTimeline(formatTime(end)+" - Shift Ended");
+    shiftActive=false;
+    generatePDF();
+}
+
+function toggleBreak(){
+    if(!shiftActive) return;
+    if(!breakActive){
+        breakActive=true;
+        breakStart=now();
+        addTimeline(formatTime(breakStart)+" - Break Started");
+        document.querySelector("button[onclick='toggleBreak()']").textContent="End Break";
+    } else {
+        let end=now();
+        totalBreakMs += end - breakStart;
+        addTimeline(formatTime(end)+" - Break Ended ("+msToMinutes(end-breakStart)+"m)");
+        breakActive=false;
+        document.querySelector("button[onclick='toggleBreak()']").textContent="Start Break";
+    }
+}
+
+function setStatus(status){
+    if(!shiftActive) return;
+
+    // If something is active, close it first
+    if(currentStatus) closeStatus();
+
+    // If Routine selected, reset everything properly
+    if(status === 'Routine'){
+        emergencyActive = false;
+        currentStatus = null;
+
+        const banner = document.getElementById("statusBanner");
+        banner.className = "status-banner status-normal";
+        banner.textContent = "Shift Active";
+
+        return;
+    }
+
+    // Prevent other statuses during active emergency
+    if(emergencyActive && status !== 'Routine') return;
+
+    currentStatus = status;
+    statusStart = now();
+
+    addTimeline(formatTime(statusStart) + " - " + status + " Started");
+}
+
+function closeStatus(){
+    let end=now();
+    addTimeline(formatTime(end)+" - "+currentStatus+" Ended ("+msToMinutes(end-statusStart)+"m)");
+    currentStatus=null;
+}
+
+function triggerEmergency(){
+    if(!shiftActive) return;
+    if(currentStatus) closeStatus();
+    emergencyActive=true;
+    currentStatus="Emergency";
+    statusStart=now();
+    document.getElementById("statusBanner").className="status-banner status-emergency";
+    document.getElementById("statusBanner").textContent="🚨 EMERGENCY ACTIVE";
+    addTimeline(formatTime(statusStart)+" - Emergency Started");
+}
+
+function addPods(){
+    let val=parseInt(document.getElementById("podsInput").value)||0;
+    totalPods+=val;
+    document.getElementById("totalPods").textContent=totalPods;
+    document.getElementById("podsInput").value=0;
+}
+
+function msToMinutes(ms){
+    return Math.round(ms/60000);
+}
+
+function updateMetrics(){
+    if(!shiftActive) return;
+    let nowTime=now();
+    let workedMs=(nowTime-shiftStart)-totalBreakMs;
+    let hours=workedMs/3600000;
+    document.getElementById("workedTime").textContent=
+        Math.floor(workedMs/3600000)+"h "+Math.floor((workedMs%3600000)/60000)+"m";
+    document.getElementById("breakTime").textContent=Math.round(totalBreakMs/60000)+"m";
+    document.getElementById("podsPerHour").textContent=
+        hours>0?(totalPods/hours).toFixed(2):0;
+}
+
+setInterval(updateMetrics,10000);
+
+function generatePDF(){
+    const { jsPDF } = window.jspdf;
+    let doc=new jsPDF();
+    doc.setFontSize(16);
+    doc.text("VERANO Operations Log",10,15);
+    doc.setFontSize(10);
+    let lines=document.getElementById("timeline").innerText.split("\n");
+    let y=25;
+    lines.forEach(line=>{
+        doc.text(line,10,y);
+        y+=6;
+    });
+    let date=new Date().toISOString().slice(0,10);
+    let name="VERANO_OperationsLog_"+date+".pdf";
+    doc.save(name);
+}
+
+</script>
+
+</body>
+</html>
