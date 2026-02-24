@@ -135,7 +135,45 @@ let statusStart=null;
 let totalPods=0;
 let emergencyActive=false;
 let events=[];
+function saveState() {
+    const state = {
+        shiftActive,
+        shiftStart,
+        breakActive,
+        breakStart,
+        totalBreakMs,
+        currentStatus,
+        statusStart,
+        totalPods,
+        emergencyActive,
+        timeline: document.getElementById("timeline").innerHTML
+    };
+    localStorage.setItem("veranoConsoleState", JSON.stringify(state));
+}
 
+function loadState() {
+    const saved = localStorage.getItem("veranoConsoleState");
+    if (!saved) return;
+
+    const state = JSON.parse(saved);
+
+    shiftActive = state.shiftActive;
+    shiftStart = state.shiftStart ? new Date(state.shiftStart) : null;
+    breakActive = state.breakActive;
+    breakStart = state.breakStart ? new Date(state.breakStart) : null;
+    totalBreakMs = state.totalBreakMs;
+    currentStatus = state.currentStatus;
+    statusStart = state.statusStart ? new Date(state.statusStart) : null;
+    totalPods = state.totalPods;
+    emergencyActive = state.emergencyActive;
+
+    document.getElementById("timeline").innerHTML = state.timeline;
+    document.getElementById("totalPods").textContent = totalPods;
+
+    if (shiftActive) {
+        document.getElementById("statusBanner").textContent = "Shift Active";
+    }
+}
 function now() {
     return new Date();
 }
@@ -253,7 +291,7 @@ function updateMetrics(){
     document.getElementById("podsPerHour").textContent=
         hours>0?(totalPods/hours).toFixed(2):0;
 }
-
+loadState();
 setInterval(updateMetrics,10000);
 
 function generatePDF(){
@@ -276,4 +314,5 @@ function generatePDF(){
 </script>
 
 </body>
+
 </html>
