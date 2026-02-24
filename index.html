@@ -192,12 +192,7 @@ function addTimeline(text) {
 }
 
 function startShift(){
-    if(shiftActive) return;
-    shiftActive=true;
-    shiftStart=now();
-    addTimeline(formatTime(shiftStart)+" - Shift Started");
-    document.getElementById("statusBanner").textContent="Shift Active";
-    saveState();
+    alert("StartShift function is running");
 }
 
 function endShift(){
@@ -205,8 +200,8 @@ function endShift(){
     if(!shiftActive) return;
 
     if (!confirm("Are you sure you want to end this shift?")) {
-        return;
-    }
+    return;
+}
 
     if(currentStatus) closeStatus();
     if(breakActive) toggleBreak();
@@ -409,6 +404,7 @@ v0.9 – 30 Day Field Test
 </body>
 
 </html>
+
 
 
 
