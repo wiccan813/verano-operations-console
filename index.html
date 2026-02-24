@@ -197,6 +197,7 @@ function startShift(){
     shiftStart=now();
     addTimeline(formatTime(shiftStart)+" - Shift Started");
     document.getElementById("statusBanner").textContent="Shift Active";
+    saveState();
 }
 
 function endShift(){
@@ -207,6 +208,7 @@ function endShift(){
     addTimeline(formatTime(end)+" - Shift Ended");
     shiftActive=false;
     generatePDF();
+    saveState();
 }
 
 function toggleBreak(){
@@ -223,6 +225,8 @@ function toggleBreak(){
         breakActive=false;
         document.querySelector("button[onclick='toggleBreak()']").textContent="Start Break";
     }
+
+    saveState();
 }
 
 function setStatus(status){
@@ -240,6 +244,8 @@ function setStatus(status){
         banner.className = "status-banner status-normal";
         banner.textContent = "Shift Active";
 
+        saveState();
+
         return;
     }
 
@@ -250,12 +256,16 @@ function setStatus(status){
     statusStart = now();
 
     addTimeline(formatTime(statusStart) + " - " + status + " Started");
+
+    saveState();
 }
 
 function closeStatus(){
     let end=now();
     addTimeline(formatTime(end)+" - "+currentStatus+" Ended ("+msToMinutes(end-statusStart)+"m)");
     currentStatus=null;
+
+    saveState();
 }
 
 function triggerEmergency(){
@@ -267,6 +277,8 @@ function triggerEmergency(){
     document.getElementById("statusBanner").className="status-banner status-emergency";
     document.getElementById("statusBanner").textContent="🚨 EMERGENCY ACTIVE";
     addTimeline(formatTime(statusStart)+" - Emergency Started");
+
+    saveState();
 }
 
 function addPods(){
@@ -274,6 +286,8 @@ function addPods(){
     totalPods+=val;
     document.getElementById("totalPods").textContent=totalPods;
     document.getElementById("podsInput").value=0;
+
+    saveState();
 }
 
 function msToMinutes(ms){
@@ -316,3 +330,4 @@ function generatePDF(){
 </body>
 
 </html>
+
