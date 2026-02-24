@@ -310,19 +310,66 @@ setInterval(updateMetrics,10000);
 
 function generatePDF(){
     const { jsPDF } = window.jspdf;
-    let doc=new jsPDF();
-    doc.setFontSize(16);
-    doc.text("VERANO Operations Log",10,15);
+    let doc = new jsPDF();
+
+    let y = 15;
+
+    // ===== HEADER =====
+    doc.setFontSize(18);
+    doc.text("VERANO – Operations Report", 10, y);
+    y += 10;
+
     doc.setFontSize(10);
-    let lines=document.getElementById("timeline").innerText.split("\n");
-    let y=25;
-    lines.forEach(line=>{
-        doc.text(line,10,y);
-        y+=6;
+    let date = new Date().toLocaleString();
+    doc.text("Generated: " + date, 10, y);
+    y += 10;
+
+    // ===== SHIFT SUMMARY =====
+    doc.setFontSize(12);
+    doc.text("Shift Summary", 10, y);
+    y += 6;
+
+    doc.setFontSize(10);
+
+    doc.text("Total Pods: " + totalPods, 10, y);
+    y += 6;
+
+    let hours = shiftActive 
+        ? ((now() - shiftStart - totalBreakMs)/3600000)
+        : 0;
+
+    doc.text("Pods Per Hour: " + (hours > 0 ? (totalPods/hours).toFixed(2) : "0"), 10, y);
+    y += 6;
+
+    doc.text("Total Break Time (min): " + Math.floor(totalBreakMs/60000), 10, y);
+    y += 10;
+
+    // ===== TIMELINE =====
+    doc.setFontSize(12);
+    doc.text("Activity Timeline", 10, y);
+    y += 8;
+
+    doc.setFontSize(9);
+
+    let lines = document
+        .getElementById("timeline")
+        .innerText
+        .split("\n");
+
+    lines.forEach(line => {
+
+        if(y > 280){ // page break protection
+            doc.addPage();
+            y = 15;
+        }
+
+        doc.text(line, 10, y);
+        y += 5;
     });
-    let date=new Date().toISOString().slice(0,10);
-    let name="VERANO_OperationsLog_"+date+".pdf";
-    doc.save(name);
+
+    // ===== SAVE FILE =====
+    let cleanDate = new Date().toISOString().slice(0,10);
+    doc.save("VERANO_Shift_Report_" + cleanDate + ".pdf");
 }
 
 </script>
@@ -341,5 +388,6 @@ v0.9 – 30 Day Field Test
 </body>
 
 </html>
+
 
 
