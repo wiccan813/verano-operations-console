@@ -214,10 +214,20 @@ function endShift(){
     let end = now();
     addTimeline(formatTime(end)+" - Shift Ended");
 
-    shiftActive = false;
-
     generatePDF();
-    saveState();
+
+    // ---- FULL RESET ----
+    shiftActive = false;
+    shiftStart = null;
+    breakActive = false;
+    breakStart = null;
+    totalBreakMs = 0;
+    currentStatus = null;
+
+    document.getElementById("timeline").innerHTML = "";
+    document.getElementById("statusBanner").textContent = "No Active Shift";
+
+    localStorage.clear();
 }
 
 function toggleBreak(){
@@ -397,6 +407,7 @@ v0.9 – 30 Day Field Test
 </body>
 
 </html>
+
 
 
 
