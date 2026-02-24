@@ -227,7 +227,9 @@ function endShift(){
     document.getElementById("timeline").innerHTML = "";
     document.getElementById("statusBanner").textContent = "No Active Shift";
 
-    localStorage.clear();
+    localStorage.removeItem("veranoState");
+location.reload();
+}
 }
 
 function toggleBreak(){
@@ -407,6 +409,7 @@ v0.9 – 30 Day Field Test
 </body>
 
 </html>
+
 
 
 
